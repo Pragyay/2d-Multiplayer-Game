@@ -10,13 +10,11 @@ canvas.height = innerHeight
 
 const x = canvas.width / 2
 const y = canvas.height / 2
-
-const player = new Player(x, y, 10, 'white')
-
+ 
 // render all players onto the screen
-const players = {}
+const frontendPlayers = {}
 
-// receive event (update players) emitted from server
+// receive event (updatePlayers) emitted from server
 socket.on('updatePlayers', (backendPlayers) => {
 
   // add player
@@ -24,20 +22,26 @@ socket.on('updatePlayers', (backendPlayers) => {
     const backendPlayer = backendPlayers[id]
 
     // if backendPlayer with this id does not exist on frontend
-    if(!players[id]){
-      players[id] = new Player(backendPlayer.x, backendPlayer.y, 10, 'white')
+    if(!frontendPlayers[id]){
+      frontendPlayers[id] = new Player({
+        x: backendPlayer.x, 
+        y: backendPlayer.y, 
+        radius: 10, 
+        color: backendPlayer.color
+      })
     }
   }
 
   // delete player
-  for(const id in players){
+  for(const id in frontendPlayers){
 
     // if player with this id does not exist on backend
     if(!backendPlayers[id]){
-      delete players[id]  
+      delete frontendPlayers[id]  
     }
   }
-  console.log(players);
+
+  console.log(frontendPlayers);
 })
 
 let animationId
@@ -47,9 +51,9 @@ function animate() {
   c.fillStyle = 'rgba(0, 0, 0, 0.1)'
   c.fillRect(0, 0, canvas.width, canvas.height)
 
-  for(const id in players){
-    const player = players[id]
-    player.draw()
+  for(const id in frontendPlayers){
+    const frontendPlayer = frontendPlayers[id]
+    frontendPlayer.draw()
   }
 }
 
