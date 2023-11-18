@@ -11,6 +11,8 @@ const io = new Server(server, {pingInterval: 2000, pingTimeout: 5000});
 
 const port = 3000
 
+const SPEED = 5
+
 app.use(express.static('public'))
 
 //serve html file
@@ -25,7 +27,8 @@ io.on('connection', (socket) => {
   backendPlayers[socket.id] = {
     x: 500*Math.random(),
     y: 500*Math.random(),
-    color: `hsl(${360*Math.random()}, 100%, 50%)`
+    color: `hsl(${360*Math.random()}, 100%, 50%)`,
+    sequenceNumber: 0
   }
 
   //emit event from server to every player
@@ -41,6 +44,33 @@ io.on('connection', (socket) => {
     // emit event to delete disconnected player from frontend
     io.emit('updatePlayers', backendPlayers)
   })
+
+  // listen to keydown event from frontend, and update player position at server
+  socket.on('keydown', ({ keycode, sequenceNumber }) => {
+    backendPlayers[socket.id].sequenceNumber = sequenceNumber
+    switch (keycode) {
+      case 'KeyW':
+        backendPlayers[socket.id].y -= SPEED
+        break
+
+      case 'KeyA':
+        backendPlayers[socket.id].x -= SPEED
+        break
+
+      case 'KeyS':
+        backendPlayers[socket.id].y += SPEED
+        break
+
+      case 'KeyD': 
+        backendPlayers[socket.id].x += SPEED
+        break
+    }
+  })
+
+  // emit player positions to frontend every 15 ms 
+  setInterval(() => {
+    io.emit('updatePlayers', backendPlayers)
+  }, 15)
 
   console.log(backendPlayers);
 
