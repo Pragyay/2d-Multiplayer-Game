@@ -13,6 +13,39 @@ const y = canvas.height / 2
  
 // render all players onto the screen
 const frontendPlayers = {}
+const frontendProjectiles = {}
+
+socket.on('connect', () => {
+  socket.emit('initCanvas', {
+    width: canvas.width,
+    height: canvas.height
+  })
+})
+
+socket.on('updateProjectiles', (backendProjectiles) => {
+  for (const id in backendProjectiles) {
+    const backendProjectile = backendProjectiles[id]
+
+    if (!frontendProjectiles[id]) {
+      frontendProjectiles[id] = new Projectile({
+        x: backendProjectile.x,
+        y: backendProjectile.y,
+        radius: 5,
+        color: frontendPlayers[backendProjectile.playerId]?.color,
+        velocity: backendProjectile.velocity
+      })
+    } else {
+      frontendProjectiles[id].x += backendProjectiles[id].velocity.x
+      frontendProjectiles[id].y += backendProjectiles[id].velocity.y
+    }
+  }
+
+  for (const frontEndProjectileId in frontendProjectiles) {
+    if (!backendProjectiles[frontEndProjectileId]) {
+      delete frontendProjectiles[frontEndProjectileId]
+    }
+  }
+})
 
 // receive event (updatePlayers) emitted from server
 socket.on('updatePlayers', (backendPlayers) => {
@@ -31,8 +64,8 @@ socket.on('updatePlayers', (backendPlayers) => {
       })
     }
     else {
+      // if a player already exists
       if (id === socket.id) {
-        // if a player already exists
         frontendPlayers[id].x = backendPlayer.x
         frontendPlayers[id].y = backendPlayer.y
 
@@ -47,8 +80,9 @@ socket.on('updatePlayers', (backendPlayers) => {
           frontendPlayers[id].x += input.dx
           frontendPlayers[id].y += input.dy
         })
-      } else {
-        // for all other players
+      } 
+      // for all other players
+      else {
 
         gsap.to(frontendPlayers[id], {
           x: backendPlayer.x,
@@ -75,14 +109,21 @@ socket.on('updatePlayers', (backendPlayers) => {
 let animationId
 
 function animate() { 
-  animationId = requestAnimationFrame(animate)
+  // c.clearRect(0,0,canvas.width,canvas.height)
   c.fillStyle = 'rgba(0, 0, 0, 0.1)'
   c.fillRect(0, 0, canvas.width, canvas.height)
-
+  
   for(const id in frontendPlayers){
     const frontendPlayer = frontendPlayers[id]
     frontendPlayer.draw()
   }
+  
+  for (const id in frontendProjectiles) {
+    const frontendProjectile = frontendProjectiles[id]
+    frontendProjectile.draw()
+  }
+
+  requestAnimationFrame(animate)
 }
 
 animate()

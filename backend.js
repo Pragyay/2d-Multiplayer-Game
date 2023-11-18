@@ -11,8 +11,6 @@ const io = new Server(server, {pingInterval: 2000, pingTimeout: 5000});
 
 const port = 3000
 
-const SPEED = 5
-
 app.use(express.static('public'))
 
 //serve html file
@@ -21,6 +19,12 @@ app.get('/', (req, res) => {
 })
 
 const backendPlayers = {}
+const backendProjectiles = {}
+
+const SPEED = 5
+const RADIUS = 10
+const PROJECTILE_RADIUS = 5
+let projectileId = 0
 
 io.on('connection', (socket) => {
   console.log('a user connected')
@@ -33,6 +37,34 @@ io.on('connection', (socket) => {
 
   //emit event from server to every player
   io.emit('updatePlayers', backendPlayers)
+
+  socket.on('initCanvas', ({ width, height}) => {
+    backendPlayers[socket.id].canvas = {
+      width,
+      height
+    }
+
+    backendPlayers[socket.id].radius = RADIUS
+  })
+
+  // when player shoots
+  socket.on('shoot', ({ x, y, angle }) => {
+    projectileId++
+
+    const velocity = {
+      x: Math.cos(angle) * 2,
+      y: Math.sin(angle) * 2
+    }
+
+    backendProjectiles[projectileId] = {
+      x,
+      y,
+      velocity,
+      playerId: socket.id
+    }
+
+    console.log(backendProjectiles)
+  })
 
   // in case a player disconnects
   socket.on('disconnect', (reason) => {
@@ -69,12 +101,48 @@ io.on('connection', (socket) => {
 
   // emit player positions to frontend every 15 ms 
   setInterval(() => {
+     // update projectile positions
+  for (const id in backendProjectiles) {
+    backendProjectiles[id].x += backendProjectiles[id].velocity.x
+    backendProjectiles[id].y += backendProjectiles[id].velocity.y
+
+    const PROJECTILE_RADIUS = 5
+    if (
+      backendProjectiles[id].x - PROJECTILE_RADIUS >=
+        backendPlayers[backendProjectiles[id].playerId]?.canvas?.width ||
+      backendProjectiles[id].x + PROJECTILE_RADIUS <= 0 ||
+      backendProjectiles[id].y - PROJECTILE_RADIUS >=
+        backendPlayers[backendProjectiles[id].playerId]?.canvas?.height ||
+      backendProjectiles[id].y + PROJECTILE_RADIUS <= 0
+    ) {
+      delete backendProjectiles[id]
+      continue
+    }
+
+    for (const playerId in backendPlayers) {
+      const backendPlayer = backendPlayers[playerId]
+
+      const DISTANCE = Math.hypot(
+        backendProjectiles[id].x - backendPlayer.x,
+        backendProjectiles[id].y - backendPlayer.y
+      )
+
+      if (
+        DISTANCE < PROJECTILE_RADIUS + backendPlayer.radius &&
+        backendProjectiles[id].playerId !== playerId
+      ) {
+        delete backendProjectiles[id]
+        delete backendPlayers[playerId]
+        break
+      }
+    }
+  }
+
+  io.emit('updateProjectiles', backendProjectiles)
     io.emit('updatePlayers', backendPlayers)
   }, 15)
 
-  console.log(backendPlayers);
-
-});
+})
 
 server.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
