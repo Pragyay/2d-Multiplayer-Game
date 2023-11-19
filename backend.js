@@ -23,30 +23,14 @@ const backendProjectiles = {}
 
 const SPEED = 5
 const RADIUS = 10
-const PROJECTILE_RADIUS = 5
+const PROJECTILE_RADIUS = 3
 let projectileId = 0
 
 io.on('connection', (socket) => {
   console.log('a user connected')
-  backendPlayers[socket.id] = {
-    x: 500*Math.random(),
-    y: 500*Math.random(),
-    color: `hsl(${360*Math.random()}, 100%, 50%)`,
-    sequenceNumber: 0,
-    score: 0
-  }
 
   //emit event from server to every player
   io.emit('updatePlayers', backendPlayers)
-
-  socket.on('initCanvas', ({ width, height}) => {
-    backendPlayers[socket.id].canvas = {
-      width,
-      height
-    }
-
-    backendPlayers[socket.id].radius = RADIUS
-  })
 
   // when player shoots
   socket.on('shoot', ({ x, y, angle }) => {
@@ -66,6 +50,29 @@ io.on('connection', (socket) => {
 
     console.log(backendProjectiles)
   })
+
+
+  // when user submits their name
+  socket.on('initGame', ({ username, width, height}) => {
+    backendPlayers[socket.id] = {
+      x: 500 * Math.random(),
+      y: 500 * Math.random(),
+      color: `hsl(${360 * Math.random()}, 100%, 50%)`,
+      sequenceNumber: 0,
+      score: 0,
+      username
+    }
+
+    // where we init our canvas
+    backendPlayers[socket.id].canvas = {
+      width,
+      height
+    }
+
+    backendPlayers[socket.id].radius = RADIUS
+
+  })
+
 
   // in case a player disconnects
   socket.on('disconnect', (reason) => {

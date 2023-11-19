@@ -15,13 +15,6 @@ const y = canvas.height / 2
 const frontendPlayers = {}
 const frontendProjectiles = {}
 
-socket.on('connect', () => {
-  socket.emit('initCanvas', {
-    width: canvas.width,
-    height: canvas.height
-  })
-})
-
 // receving projectiles from backend and dislpaying on frontend
 socket.on('updateProjectiles', (backendProjectiles) => {
   for (const id in backendProjectiles) {
@@ -33,7 +26,7 @@ socket.on('updateProjectiles', (backendProjectiles) => {
       frontendProjectiles[id] = new Projectile({
         x: backendProjectile.x,
         y: backendProjectile.y,
-        radius: 5,
+        radius: 3,
         color: frontendPlayers[backendProjectile.playerId]?.color,
         velocity: backendProjectile.velocity
       })
@@ -66,19 +59,20 @@ socket.on('updatePlayers', (backendPlayers) => {
         x: backendPlayer.x, 
         y: backendPlayer.y, 
         radius: 10, 
-        color: backendPlayer.color
+        color: backendPlayer.color,
+        username: backendPlayer.username
       })
 
       document.querySelector(
         '#playerLabels'
-      ).innerHTML += `<div data-id="${id}" data-score="${backendPlayer.score}">${id}: ${backendPlayer.score}</div>`
+      ).innerHTML += `<div data-id="${id}" data-score="${backendPlayer.score}">${backendPlayer.username}: ${backendPlayer.score}</div>`
 
     }
     // update scoreboard
     else {
       document.querySelector(
         `div[data-id="${id}"]`
-      ).innerHTML = `${id}: ${backendPlayer.score}`
+      ).innerHTML = `${backendPlayer.username}: ${backendPlayer.score}`
 
       document
         .querySelector(`div[data-id="${id}"]`)
@@ -142,6 +136,11 @@ socket.on('updatePlayers', (backendPlayers) => {
     if(!backendPlayers[id]){
       const divToDelete = document.querySelector(`div[data-id="${id}"]`)
       divToDelete.parentNode.removeChild(divToDelete)
+
+      if (id === socket.id) {
+        document.querySelector('#usernameForm').style.display = 'block'
+      }
+
       delete frontendPlayers[id]  
     }
   }
@@ -152,9 +151,7 @@ socket.on('updatePlayers', (backendPlayers) => {
 let animationId
 
 function animate() { 
-  // c.clearRect(0,0,canvas.width,canvas.height)
-  c.fillStyle = 'rgba(0, 0, 0, 0.1)'
-  c.fillRect(0, 0, canvas.width, canvas.height)
+  c.clearRect(0,0,canvas.width,canvas.height)
   
   // render all players
   for(const id in frontendPlayers){
@@ -188,10 +185,7 @@ const keys = {
   }
 }
 
-// when key pressed, 
-// 1) update position of player and projectile on user's frontend 
-// 2) check for collision detection
-// 3) send updated position to backend
+// when key pressed, update position of player and projectiles on user's frontend and send updated position to backend
 const SPEED = 10
 const playerInputs = []
 let sequenceNumber = 0
@@ -269,5 +263,18 @@ window.addEventListener('keyup', (event) => {
       keys.d.pressed = false
       break
   }
+})
+
+// initialise game after getting name from user
+document.querySelector('#usernameForm').addEventListener('submit', (event) => {
+  event.preventDefault()
+
+  // hide form when we click 'submit'
+  document.querySelector('#usernameForm').style.display = 'none'
+  socket.emit('initGame', {
+    width: canvas.width,
+    height: canvas.height,
+    username: document.querySelector('#usernameInput').value
+  })
 })
 
