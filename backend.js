@@ -32,7 +32,8 @@ io.on('connection', (socket) => {
     x: 500*Math.random(),
     y: 500*Math.random(),
     color: `hsl(${360*Math.random()}, 100%, 50%)`,
-    sequenceNumber: 0
+    sequenceNumber: 0,
+    score: 0
   }
 
   //emit event from server to every player
@@ -99,14 +100,19 @@ io.on('connection', (socket) => {
     }
   })
 
-  // emit player positions to frontend every 15 ms 
+  // emit player and projectiles positions to frontend every 15 ms 
+  // also, check for collision detections
   setInterval(() => {
      // update projectile positions
   for (const id in backendProjectiles) {
+
+    // update position
     backendProjectiles[id].x += backendProjectiles[id].velocity.x
     backendProjectiles[id].y += backendProjectiles[id].velocity.y
 
     const PROJECTILE_RADIUS = 5
+
+    // if player hit with projectile
     if (
       backendProjectiles[id].x - PROJECTILE_RADIUS >=
         backendPlayers[backendProjectiles[id].playerId]?.canvas?.width ||
@@ -115,10 +121,12 @@ io.on('connection', (socket) => {
         backendPlayers[backendProjectiles[id].playerId]?.canvas?.height ||
       backendProjectiles[id].y + PROJECTILE_RADIUS <= 0
     ) {
-      delete backendProjectiles[id]
+      // increase score of player
+      backendProjectiles[id].score++
       continue
     }
 
+    // updating scoreboard
     for (const playerId in backendPlayers) {
       const backendPlayer = backendPlayers[playerId]
 
@@ -126,13 +134,19 @@ io.on('connection', (socket) => {
         backendProjectiles[id].x - backendPlayer.x,
         backendProjectiles[id].y - backendPlayer.y
       )
+      
+      // garbage collection 
+      if ( DISTANCE < PROJECTILE_RADIUS + backendPlayer.radius &&
+          backendProjectiles[id].playerId !== playerId) {
 
-      if (
-        DISTANCE < PROJECTILE_RADIUS + backendPlayer.radius &&
-        backendProjectiles[id].playerId !== playerId
-      ) {
+        // if projectile hits player, update score
+        if (backendPlayers[backendProjectiles[id].playerId])
+          backendPlayers[backendProjectiles[id].playerId].score++
+
+        console.log(backendPlayers[backendProjectiles[id].playerId])
+
+        /// delete projectile that has collided or moved out of screen
         delete backendProjectiles[id]
-        delete backendPlayers[playerId]
         break
       }
     }

@@ -22,10 +22,13 @@ socket.on('connect', () => {
   })
 })
 
+// receving projectiles from backend and dislpaying on frontend
 socket.on('updateProjectiles', (backendProjectiles) => {
   for (const id in backendProjectiles) {
     const backendProjectile = backendProjectiles[id]
 
+    // if backend projectile with this id not present in frontend,
+    // create new projectile on frontend
     if (!frontendProjectiles[id]) {
       frontendProjectiles[id] = new Projectile({
         x: backendProjectile.x,
@@ -34,12 +37,15 @@ socket.on('updateProjectiles', (backendProjectiles) => {
         color: frontendPlayers[backendProjectile.playerId]?.color,
         velocity: backendProjectile.velocity
       })
-    } else {
+    } 
+    // else, just update position of projectile
+    else {
       frontendProjectiles[id].x += backendProjectiles[id].velocity.x
       frontendProjectiles[id].y += backendProjectiles[id].velocity.y
     }
   }
 
+  // check if any projectile deleted from backend, if yes, delete it from frontend as well
   for (const frontEndProjectileId in frontendProjectiles) {
     if (!backendProjectiles[frontEndProjectileId]) {
       delete frontendProjectiles[frontEndProjectileId]
@@ -47,14 +53,14 @@ socket.on('updateProjectiles', (backendProjectiles) => {
   }
 })
 
-// receive event (updatePlayers) emitted from server
+// receive player info from backend and display on frontend
 socket.on('updatePlayers', (backendPlayers) => {
 
   // add player
   for(const id in backendPlayers){
     const backendPlayer = backendPlayers[id]
 
-    // if backendPlayer with this id does not exist on frontend
+    // if backendPlayer with this id does not exist on frontend, add to frontend
     if(!frontendPlayers[id]){
       frontendPlayers[id] = new Player({
         x: backendPlayer.x, 
@@ -62,9 +68,44 @@ socket.on('updatePlayers', (backendPlayers) => {
         radius: 10, 
         color: backendPlayer.color
       })
+
+      document.querySelector(
+        '#playerLabels'
+      ).innerHTML += `<div data-id="${id}" data-score="${backendPlayer.score}">${id}: ${backendPlayer.score}</div>`
+
     }
+    // update scoreboard
     else {
-      // if a player already exists
+      document.querySelector(
+        `div[data-id="${id}"]`
+      ).innerHTML = `${id}: ${backendPlayer.score}`
+
+      document
+        .querySelector(`div[data-id="${id}"]`)
+        .setAttribute('data-score', backendPlayer.score)
+
+      // sorts the players divs
+      const parentDiv = document.querySelector('#playerLabels')
+      const childDivs = Array.from(parentDiv.querySelectorAll('div'))
+
+      childDivs.sort((a, b) => {
+        const scoreA = Number(a.getAttribute('data-score'))
+        const scoreB = Number(b.getAttribute('data-score'))
+
+        return scoreB - scoreA
+      })
+
+      // removes old elements
+      childDivs.forEach((div) => {
+        parentDiv.removeChild(div)
+      })
+
+      // adds sorted elements
+      childDivs.forEach((div) => {
+        parentDiv.appendChild(div)
+      })
+
+      // send the clients position to backend
       if (id === socket.id) {
         frontendPlayers[id].x = backendPlayer.x
         frontendPlayers[id].y = backendPlayer.y
@@ -81,7 +122,7 @@ socket.on('updatePlayers', (backendPlayers) => {
           frontendPlayers[id].y += input.dy
         })
       } 
-      // for all other players
+      // update every other players position on the client's screen
       else {
 
         gsap.to(frontendPlayers[id], {
@@ -94,11 +135,13 @@ socket.on('updatePlayers', (backendPlayers) => {
     }
   }
 
-  // delete player
+  // delete player from frontend
   for(const id in frontendPlayers){
 
     // if player with this id does not exist on backend
     if(!backendPlayers[id]){
+      const divToDelete = document.querySelector(`div[data-id="${id}"]`)
+      divToDelete.parentNode.removeChild(divToDelete)
       delete frontendPlayers[id]  
     }
   }
@@ -113,11 +156,13 @@ function animate() {
   c.fillStyle = 'rgba(0, 0, 0, 0.1)'
   c.fillRect(0, 0, canvas.width, canvas.height)
   
+  // render all players
   for(const id in frontendPlayers){
     const frontendPlayer = frontendPlayers[id]
     frontendPlayer.draw()
   }
   
+  // render all projectiles
   for (const id in frontendProjectiles) {
     const frontendProjectile = frontendProjectiles[id]
     frontendProjectile.draw()
@@ -143,7 +188,10 @@ const keys = {
   }
 }
 
-// when key pressed, update position on user's frontend and send updated position to backend
+// when key pressed, 
+// 1) update position of player and projectile on user's frontend 
+// 2) check for collision detection
+// 3) send updated position to backend
 const SPEED = 10
 const playerInputs = []
 let sequenceNumber = 0
