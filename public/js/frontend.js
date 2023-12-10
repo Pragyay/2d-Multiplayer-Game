@@ -143,7 +143,8 @@ socket.on('updatePlayers', (backendPlayers) => {
 let animationId
 
 function animate() { 
-  c.clearRect(0,0,canvas.width,canvas.height)
+  c.fillStyle = 'rgba(0,0,0,0.1)';
+  c.fillRect(0,0,canvas.width,canvas.height)
   
   // render all players
   for(const id in frontendPlayers){
