@@ -21,7 +21,7 @@ app.get('/', (req, res) => {
 const backendPlayers = {}
 const backendProjectiles = {}
 
-const SPEED = 5
+const SPEED = 4
 const RADIUS = 10
 const PROJECTILE_RADIUS = 3
 let projectileId = 0
@@ -87,8 +87,13 @@ io.on('connection', (socket) => {
 
   // listen to keydown event from frontend, and update player position at server
   socket.on('keydown', ({ keycode, sequenceNumber }) => {
+
+    if (!backendPlayers[socket.id]) return
+
     backendPlayers[socket.id].sequenceNumber = sequenceNumber
+
     switch (keycode) {
+
       case 'KeyW':
         backendPlayers[socket.id].y -= SPEED
         break
@@ -117,7 +122,7 @@ io.on('connection', (socket) => {
     backendProjectiles[id].x += backendProjectiles[id].velocity.x
     backendProjectiles[id].y += backendProjectiles[id].velocity.y
 
-    const PROJECTILE_RADIUS = 5
+    const PROJECTILE_RADIUS = 4
 
     // if player hit with projectile
     if (

@@ -26,7 +26,7 @@ socket.on('updateProjectiles', (backendProjectiles) => {
       frontendProjectiles[id] = new Projectile({
         x: backendProjectile.x,
         y: backendProjectile.y,
-        radius: 3,
+        radius: 4,
         color: frontendPlayers[backendProjectile.playerId]?.color,
         velocity: backendProjectile.velocity
       })
@@ -100,10 +100,12 @@ socket.on('updatePlayers', (backendPlayers) => {
       })
 
       // send the clients position to backend
-      if (id === socket.id) {
-        frontendPlayers[id].x = backendPlayer.x
-        frontendPlayers[id].y = backendPlayer.y
+      frontendPlayers[id].target = {
+        x: backendPlayer.x,
+        y: backendPlayer.y
+      }
 
+      if(id == socket.id){
         const lastBackendInputIndex = playerInputs.findIndex((input) => {
           return backendPlayer.sequenceNumber === input.sequenceNumber
         })
@@ -112,18 +114,8 @@ socket.on('updatePlayers', (backendPlayers) => {
           playerInputs.splice(0, lastBackendInputIndex + 1)
 
         playerInputs.forEach((input) => {
-          frontendPlayers[id].x += input.dx
-          frontendPlayers[id].y += input.dy
-        })
-      } 
-      // update every other players position on the client's screen
-      else {
-
-        gsap.to(frontendPlayers[id], {
-          x: backendPlayer.x,
-          y: backendPlayer.y,
-          duration: 0.015,
-          ease: 'linear'
+          frontendPlayers[id].target.x += input.dx
+          frontendPlayers[id].target.y += input.dy
         })
       }
     }
@@ -156,6 +148,15 @@ function animate() {
   // render all players
   for(const id in frontendPlayers){
     const frontendPlayer = frontendPlayers[id]
+
+     // linear interpolation
+     if (frontendPlayer.target) {
+      frontendPlayers[id].x +=
+        (frontendPlayers[id].target.x - frontendPlayers[id].x) * 0.5
+      frontendPlayers[id].y +=
+        (frontendPlayers[id].target.y - frontendPlayers[id].y) * 0.5
+    }
+
     frontendPlayer.draw()
   }
   
@@ -186,7 +187,7 @@ const keys = {
 }
 
 // when key pressed, update position of player and projectiles on user's frontend and send updated position to backend
-const SPEED = 10
+const SPEED = 5
 const playerInputs = []
 let sequenceNumber = 0
 setInterval(() => {

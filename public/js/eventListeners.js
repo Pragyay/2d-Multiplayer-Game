@@ -1,6 +1,6 @@
 addEventListener('click', (event) => {
     const playerPosition = {
-      x: frontendPlayers[socket.id].x,
+      x: frontendPlayers[socket.id].x ,
       y: frontendPlayers[socket.id].y
     }
   
