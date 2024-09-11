@@ -1,7 +1,7 @@
 const canvas = document.querySelector('canvas')
 const c = canvas.getContext('2d')
 
-const socket = io('https://2d-multiplayer-game-aimunygig-pragyays-projects.vercel.app');
+const socket = io('https://2d-multiplayer-game.vercel.app/');
 
 const scoreEl = document.querySelector('#scoreEl')
 
